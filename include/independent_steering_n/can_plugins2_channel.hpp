@@ -7,8 +7,10 @@
 #include <syncstream>
 #include <memory>
 #include <chrono>
+
 #include <rclcpp/rclcpp.hpp>
 #include <can_plugins2/msg/frame.hpp>
+
 #include "can_channel.hpp"
 
 namespace nhk2024::independent_steering_n::can_plugins2_channel
@@ -133,7 +135,7 @@ namespace nhk2024::independent_steering_n::can_plugins2_channel
 			return ChannelManager{pub, logger, {}};
 		}
 
-		void receive(const can_plugins2::msg::Frame::SharedPtr& msg) noexcept
+		void receive(const can_plugins2::msg::Frame::ConstSharedPtr& msg) noexcept
 		{
 			try
 			{

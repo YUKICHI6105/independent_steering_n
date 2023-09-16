@@ -1,8 +1,5 @@
 #pragma once
 
-#include <utility>
-#include <concepts>
-#include "shirasu.hpp"
 #include "rational.hpp"
 
 namespace nhk2024::independent_steering_n::gearbox

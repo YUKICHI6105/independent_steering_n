@@ -1,17 +1,11 @@
 #pragma once
 
 #include <cstdint>
-#include <cstring>
 #include <optional>
-#include <variant>
-#include <future>
 #include <utility>
-#include <chrono>
-#include <thread>
 
 #include <can_plugins2/msg/frame.hpp>
 
-#include "utility.hpp"
 #include "can_channel.hpp"
 
 namespace nhk2024::independent_steering_n::shirasu

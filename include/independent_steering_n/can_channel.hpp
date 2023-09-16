@@ -1,9 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <cstring>
 #include <optional>
-#include <variant>
-#include <exception>
 #include <concepts>
 #include <type_traits>
 #include <utility>

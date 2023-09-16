@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(independent_steering_n)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -pedantic-errors -std=c++20 -fmax-errors=3)
+  add_compile_options(-Wall -Wextra -pedantic-errors -std=c++20 -latomic)
 endif()
 
 # find dependencies
@@ -14,32 +14,53 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(geometry_msgs REQUIRED)
 find_package(can_plugins2 REQUIRED)
 find_package(fake_robomaster_serial_can REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
+ament_export_dependencies(rosidl_default_runtime)
 
-include_directories(include
-  ${MyLibraryPath}
+set(msg_files
+  "msg/LinearVelocity.msg"
+  "msg/AngularVelocity.msg"
 )
 
-add_library(node SHARED
+include_directories(
+  include
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  ${msg_files}
+)
+
+add_executable(node
   src/node.cpp
 )
 
-rclcpp_components_register_nodes(node "nhk2024::independent_steering_n::Node")
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} "rosidl_typesupport_cpp"
+)
+target_link_libraries(node "${cpp_typesupport_target}" atomic)
+
+# add_library(node SHARED
+#   src/independent_steering_n.cpp
+# )
+# rclcpp_components_register_nodes(node "nhk2024::independent_steering_n::Node")
+
 ament_target_dependencies(node
   rclcpp
   rclcpp_components
   std_msgs
-  geometry_msgs
   can_plugins2
   fake_robomaster_serial_can
 )
 
+ament_export_include_directories(include)
+
 install(
   TARGETS node
-  LIBRARY DESTINATION lib
+
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)

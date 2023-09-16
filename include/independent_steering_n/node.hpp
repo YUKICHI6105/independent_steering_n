@@ -1,29 +1,41 @@
+/**
+ * @file node.hpp
+ * @author Stew (you@domain.com)
+ * @brief indenependent_steering_nのノード。ヘッダに入れとけば実行ファイルにするのもコンポーネント化するのも楽。
+ * @version 0.1
+ * @date 2023-09-15
+ * 
+ * @copyright Copyright (c) 2023
+ * 
+ */
+
 #pragma once
 
 #include <cstdint>
-#include <cstring>
 #include <cmath>
-#include <atomic>
-#include <mutex>
+
+#include <chrono>
 #include <optional>
 #include <utility>
+#include <atomic>
+#include <mutex>
 #include <array>
-#include <future>
-#include <chrono>
-#include <functional>
-#include <stdexcept>
 #include <numbers>
+#include <stdexcept>
+#include <string_view>
+#include <string>
+#include <functional>
 
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/u_int8.hpp>
-#include <geometry_msgs/msg/twist.hpp>
-
 #include <can_plugins2/msg/frame.hpp>
 #include <fake_robomaster_serial_can/msg/robomas_frame.hpp>
+#include <independent_steering_n/msg/linear_velocity.hpp>
+#include <independent_steering_n/msg/angular_velocity.hpp>
 
 #include "utility.hpp"
 #include "shirasu.hpp"
-#include "robomasu_pub.hpp"
+#include "robomaster_pub.hpp"
 #include "gearbox.hpp"
 #include "steering_wheel.hpp"
 #include "control_mode.hpp"
@@ -38,12 +50,6 @@ namespace nhk2024::independent_steering_n::node
 		{
 			double x;
 			double y;
-		};
-
-		struct Twist final
-		{
-			Vec2 linear;
-			double yaw;
 		};
 
 		template<class T, class U>
@@ -74,7 +80,8 @@ namespace nhk2024::independent_steering_n::node
 		rclcpp::Publisher<can_plugins2::msg::Frame>::SharedPtr can_tx;
 		rclcpp::Publisher<fake_robomaster_serial_can::msg::RobomasFrame>::SharedPtr robomas_pub;
 
-		std::atomic<impl::Twist> body_twist;
+		std::atomic<impl::Vec2> linear_velocity;
+		std::atomic<double> angular_velocity;
 		control_mode::ControlMode mode;
 		std::mutex mode_mutex;
 		can_plugins2_channel::ChannelManager can_manager;
@@ -83,7 +90,8 @@ namespace nhk2024::independent_steering_n::node
 
 		rclcpp::TimerBase::SharedPtr timer{};
 		rclcpp::Subscription<can_plugins2::msg::Frame>::SharedPtr can_rx{};
-		rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr body_twist_sub{};
+		rclcpp::Subscription<::independent_steering_n::msg::LinearVelocity>::SharedPtr linear_velocity_sub{};
+		rclcpp::Subscription<::independent_steering_n::msg::AngularVelocity>::SharedPtr angular_velocity_sub{};
 		rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr control_mode_sub{};
 
 		static constexpr auto initialize_wheels() noexcept
@@ -126,28 +134,30 @@ namespace nhk2024::independent_steering_n::node
 		}
 
 		public:
-		Node(const rclcpp::NodeOptions& options):
-			rclcpp::Node("independent_steering_n", options),
+		Node(const std::string_view node_name, const rclcpp::NodeOptions& options):
+			rclcpp::Node(std::string(node_name), options),
 			can_tx{this->create_publisher<can_plugins2::msg::Frame>("can_tx", 100)},
 			robomas_pub{this->create_publisher<fake_robomaster_serial_can::msg::RobomasFrame>("robomasu_tx", 100)},
-			body_twist{impl::Twist{}},
+			linear_velocity{},
+			angular_velocity{},
 			mode{control_mode::ControlMode::disable},
 			mode_mutex{},
 			can_manager{can_plugins2_channel::ChannelManager::make(can_tx, this->get_logger())},
 			wheels{initialize_wheels()},
 			shirasus{initialize_shirasus(can_manager)}
 		{
+			robomaster_pub::init(this->get_logger(), robomas_pub);
 			timer = this->create_wall_timer(10ms, std::bind(&Node::timer_callback, this));
 			can_rx = this->create_subscription<can_plugins2::msg::Frame>("can_rx", 100, std::bind(&Node::can_rx_callback, this, std::placeholders::_1));
-			body_twist_sub = this->create_subscription<geometry_msgs::msg::Twist>("body_twist", 1, std::bind(&Node::body_twist_callback, this, std::placeholders::_1));
-			control_mode_sub = this->create_subscription<std_msgs::msg::UInt8>("control_mode", 100, std::bind(&Node::control_mode_callback, this, std::placeholders::_1));
+			linear_velocity_sub = this->create_subscription<::independent_steering_n::msg::LinearVelocity>(std::string(node_name) + "/linear_velocity", 1, std::bind(&Node::linear_velocity_callback, this, std::placeholders::_1));
+			angular_velocity_sub = this->create_subscription<::independent_steering_n::msg::AngularVelocity>(std::string(node_name) + "/angular_velocity", 1, std::bind(&Node::angular_velocity_callback, this, std::placeholders::_1));
+			control_mode_sub = this->create_subscription<std_msgs::msg::UInt8>(std::string(node_name) + "/control_mode", 100, std::bind(&Node::control_mode_callback, this, std::placeholders::_1));
 		}
 
+		private:
 		void timer_callback()
 		{
 			using control_mode::ControlMode;
-
-			auto twist = body_twist.load();
 
 			{
 				std::lock_guard lck{mode_mutex};
@@ -159,50 +169,59 @@ namespace nhk2024::independent_steering_n::node
 					
 					case ControlMode::crab:
 					{
-						const double theta = std::atan2(twist.linear.y, twist.linear.x);
-						const double v = std::sqrt(twist.linear.x * twist.linear.x + twist.linear.y * twist.linear.y);
+						const auto linear = linear_velocity.load();
+						const double theta = std::atan2(linear.y, linear.x);
+						const double v = std::sqrt(linear.x * linear.x + linear.y * linear.y);
 						float drive_targets[4]{};
 						for(int i = 0; i < 4; ++i)
 						{
 							const auto [steer_target, drive_target] = wheels[i].inverse(theta, v);
+							RCLCPP_INFO(this->get_logger(), "steer_target: %f", steer_target);
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
-						robomasu_pub::send_target(robomas_pub, drive_targets);
+						robomaster_pub::send_target(robomas_pub, drive_targets);
 					}
 					break;
 
 					case ControlMode::spinning:
 					{
+						const auto angular = angular_velocity.load();
 						float drive_targets[4]{};
 						for(int i = 0; i < 4; ++i)
 						{
-							const auto [steer_target, drive_target] = wheels[i].inverse(wheels[i].zero_angle, twist.yaw);
+							const auto [steer_target, drive_target] = wheels[i].inverse(wheels[i].zero_angle, angular);
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
-						robomasu_pub::send_target(robomas_pub, drive_targets);
+						robomaster_pub::send_target(robomas_pub, drive_targets);
 					}
 					break;
 				}
 			}
 		}
 
-		void can_rx_callback(const can_plugins2::msg::Frame::SharedPtr msg)
+		void can_rx_callback(const can_plugins2::msg::Frame::ConstSharedPtr msg)
 		{
 			can_manager.receive(msg);
 		}
 
-		void body_twist_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
+		void linear_velocity_callback(const ::independent_steering_n::msg::LinearVelocity::ConstSharedPtr msg)
 		{
-			const auto linear = impl::Vec2{msg->linear.x, msg->linear.y};
-			const double angular = msg->angular.z;
-			body_twist.store(impl::Twist{linear, angular});
+			auto linear = impl::Vec2{msg->x, msg->y};
+			linear_velocity.store(std::move(linear));
 		}
 
-		void control_mode_callback(const std_msgs::msg::UInt8::SharedPtr msg)
+		void angular_velocity_callback(const ::independent_steering_n::msg::AngularVelocity::ConstSharedPtr msg)
+		{
+			angular_velocity.store(msg->yaw);
+		}
+
+		void control_mode_callback(const std_msgs::msg::UInt8::ConstSharedPtr msg)
 		{
 			using control_mode::ControlMode;
+
+			clear_velocity();
 
 			auto mode = control_mode::to_control_mode(*msg);
 			if(mode)
@@ -217,7 +236,7 @@ namespace nhk2024::independent_steering_n::node
 							{
 								steer.send_command<shirasu::State::disable>();
 							}
-							robomasu_pub::disable_all(robomas_pub);
+							robomaster_pub::disable_all(robomas_pub);
 							break;
 						
 						case ControlMode::crab:
@@ -225,7 +244,7 @@ namespace nhk2024::independent_steering_n::node
 							{
 								steer.send_command<shirasu::State::velocity>();
 							}
-							robomasu_pub::enable_all(robomas_pub);
+							robomaster_pub::enable_all(robomas_pub);
 							break;
 
 						case ControlMode::spinning:
@@ -233,7 +252,7 @@ namespace nhk2024::independent_steering_n::node
 							{
 								steer.send_command<shirasu::State::velocity>();
 							}
-							robomasu_pub::enable_all(robomas_pub);
+							robomaster_pub::enable_all(robomas_pub);
 							break;
 					}
 					RCLCPP_INFO(this->get_logger(), "control mode changing end: %d", msg->data);
@@ -245,6 +264,12 @@ namespace nhk2024::independent_steering_n::node
 			{
 				RCLCPP_WARN(this->get_logger(), "invalid control mode: %d", msg->data);
 			}
+		}
+
+		void clear_velocity() noexcept
+		{
+			linear_velocity.store(impl::Vec2{});
+			angular_velocity.store(0.0);
 		}
 	};
 }

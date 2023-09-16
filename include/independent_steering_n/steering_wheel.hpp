@@ -1,12 +1,9 @@
 #pragma once
 
-#include <cstdint>
 #include <cmath>
 #include <numbers>
 #include <utility>
-#include <variant>
 
-#include "can_plugins2_channel.hpp"
 #include "gearbox.hpp"
 
 namespace nhk2024::independent_steering_n::steering_wheel
