@@ -52,9 +52,6 @@ namespace nhk2024::independent_steering_n::node
 			double y;
 		};
 
-		template<class T, class U>
-		using OptPair = std::optional<std::pair<T, U>>;
-
 		struct AssembledWheel final
 		{
 			const gearbox::Gearedbox steer_gb;
@@ -77,17 +74,25 @@ namespace nhk2024::independent_steering_n::node
 
 	class Node final : public rclcpp::Node
 	{
+		// publisher
 		rclcpp::Publisher<can_plugins2::msg::Frame>::SharedPtr can_tx;
 		rclcpp::Publisher<fake_robomaster_serial_can::msg::RobomasFrame>::SharedPtr robomas_pub;
 
+		// state of undercarriage
 		std::atomic<impl::Vec2> linear_velocity;
 		std::atomic<double> angular_velocity;
 		control_mode::ControlMode mode;
 		std::mutex mode_mutex;
-		can_plugins2_channel::ChannelManager can_manager;
-		std::array<impl::AssembledWheel, 4> wheels;
-		std::array<shirasu::Shirasu, 4> shirasus;
 
+		// object to calculate each motor's target
+		std::array<impl::AssembledWheel, 4> wheels;
+
+		// object to send target to each steering shirasu motor via CAN
+		can_plugins2_channel::ChannelManager can_manager;
+		std::array<shirasu::Shirasu, 4> shirasus;
+		// (to send target, you can use robomaster_pub::*)
+
+		// timer and subscriber
 		rclcpp::TimerBase::SharedPtr timer{};
 		rclcpp::Subscription<can_plugins2::msg::Frame>::SharedPtr can_rx{};
 		rclcpp::Subscription<::independent_steering_n::msg::LinearVelocity>::SharedPtr linear_velocity_sub{};
@@ -142,8 +147,8 @@ namespace nhk2024::independent_steering_n::node
 			angular_velocity{},
 			mode{control_mode::ControlMode::disable},
 			mode_mutex{},
-			can_manager{can_plugins2_channel::ChannelManager::make(can_tx, this->get_logger())},
 			wheels{initialize_wheels()},
+			can_manager{can_plugins2_channel::ChannelManager::make(can_tx, this->get_logger())},
 			shirasus{initialize_shirasus(can_manager)}
 		{
 			robomaster_pub::init(this->get_logger(), robomas_pub);
