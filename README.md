@@ -18,3 +18,4 @@ C++知識が少なくても読める。はずだった。
 node.hppがノード本体である。
 これを直接rclcpp::executors内のエグゼキュータに渡してもよし、RCLCPP_COMPONENTS_REGISTER_NODEに渡してもよし。
 
+**@todoとある部分を直すこと**。
