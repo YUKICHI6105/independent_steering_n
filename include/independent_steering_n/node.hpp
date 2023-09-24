@@ -29,7 +29,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <can_plugins2/msg/frame.hpp>
-#include <fake_robomaster_serial_can/msg/robomas_frame.hpp>
+#include <can_plugins2/msg/robomas_frame.hpp>
 #include <independent_steering_n/msg/linear_velocity.hpp>
 #include <independent_steering_n/msg/angular_velocity.hpp>
 
@@ -76,7 +76,7 @@ namespace nhk2024::independent_steering_n::node
 	{
 		// publisher
 		rclcpp::Publisher<can_plugins2::msg::Frame>::SharedPtr can_tx;
-		rclcpp::Publisher<fake_robomaster_serial_can::msg::RobomasFrame>::SharedPtr robomas_pub;
+		rclcpp::Publisher<can_plugins2::msg::RobomasFrame>::SharedPtr robomas_pub;
 
 		// state of undercarriage
 		std::atomic<impl::Vec2> linear_velocity;
@@ -102,8 +102,8 @@ namespace nhk2024::independent_steering_n::node
 		static constexpr auto initialize_wheels() noexcept
 		{
 			/// @todo 設定
-			constexpr rational::Rational steer_ratio{1, 1};
-			constexpr rational::Rational drive_ratio{1, 1};
+			constexpr rational::Rational steer_ratio{2, 5};
+			constexpr rational::Rational drive_ratio{1, 10};
 
 			return std::array<impl::AssembledWheel, 4>
 			{
@@ -142,7 +142,7 @@ namespace nhk2024::independent_steering_n::node
 		Node(const std::string_view node_name, const rclcpp::NodeOptions& options):
 			rclcpp::Node(std::string(node_name), options),
 			can_tx{this->create_publisher<can_plugins2::msg::Frame>("can_tx", 100)},
-			robomas_pub{this->create_publisher<fake_robomaster_serial_can::msg::RobomasFrame>("robomasu_tx", 100)},
+			robomas_pub{this->create_publisher<can_plugins2::msg::RobomasFrame>("robomaster", 100)},
 			linear_velocity{},
 			angular_velocity{},
 			mode{control_mode::ControlMode::disable},

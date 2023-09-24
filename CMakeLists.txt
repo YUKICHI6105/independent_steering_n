@@ -15,7 +15,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(can_plugins2 REQUIRED)
-find_package(fake_robomaster_serial_can REQUIRED)
+# find_package(fake_robomaster_serial_can REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 ament_export_dependencies(rosidl_default_runtime)
@@ -52,7 +52,6 @@ ament_target_dependencies(node
   rclcpp_components
   std_msgs
   can_plugins2
-  fake_robomaster_serial_can
 )
 
 ament_export_include_directories(include)

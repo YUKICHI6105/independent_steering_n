@@ -12,11 +12,11 @@ namespace nhk2024::independent_steering_n::gearbox
 
 	struct Gearedbox final
 	{
-		rational::Rational from_motor_to_shaft;
+		rational::Rational shaft_per_motor;
 
 		auto inverse(const double target) const noexcept -> double
 		{
-			return from_motor_to_shaft.template to<double>() * target;
+			return shaft_per_motor.inverse().template to<double>() * target;
 		}
 	};
 }

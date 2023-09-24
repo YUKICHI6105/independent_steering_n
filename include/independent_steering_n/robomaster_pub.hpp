@@ -3,13 +3,13 @@
 #include <optional>
 
 #include <rclcpp/rclcpp.hpp>
-#include <fake_robomaster_serial_can/msg/robomas_frame.hpp>
+#include <can_plugins2/msg/robomas_frame.hpp>
 
 namespace nhk2024::independent_steering_n::robomaster_pub
 {
 	namespace impl
 	{
-		using fake_robomaster_serial_can::msg::RobomasFrame;
+		using can_plugins2::msg::RobomasFrame;
 		std::optional<rclcpp::Logger> logger{};
 	}
 
