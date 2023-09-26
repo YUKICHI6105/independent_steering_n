@@ -44,6 +44,8 @@ namespace nhk2024::independent_steering_n::node
 {
 	using namespace std::chrono_literals;
 
+	constexpr double deadzone = 0.05;
+
 	namespace impl
 	{
 		struct Vec2 final
@@ -196,7 +198,7 @@ namespace nhk2024::independent_steering_n::node
 						const double v = std::sqrt(linear.x * linear.x + linear.y * linear.y);
 
 						float drive_targets[4]{};
-						if(v < 0.05) for(int i = 0; i < 4; ++i)
+						if(v < deadzone) for(int i = 0; i < 4; ++i)
 						{
 							const auto steer_target = wheels[i].stop();
 							shirasus[i].send_target(steer_target);
