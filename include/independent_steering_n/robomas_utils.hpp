@@ -1,20 +1,24 @@
-#include <can_plugins2/msg/robomas_frame.hpp>
-#include <can_plugins2/msg/robomas_target.hpp>
+#pragma once
 
-inline std::unique_ptr<can_plugins2::msg::RobomasFrame> get_robomas_frame(const uint8_t motor,const uint8_t mode, const uint8_t temp, const float kp, const float ki, const float kd, const float limitie){
-  auto msg = std::make_unique<can_plugins2::msg::RobomasFrame>();
-  msg->motor = motor;
-  msg->mode = mode;
-  msg->temp = temp;
-  msg->kp = kp;
-  msg->ki = ki;
-  msg->kd = kd;
-  msg->limitie = limitie;
-  return msg;
-}
+#include <cstdint>
+#include "not_canplugins2_part.hpp"
+namespace nhk2024::independent_steering_n::robomas_utils
+{
+	inline std::unique_ptr<robo_messages::RobomasFrame> get_robomas_frame(const std::uint8_t motor,const std::uint8_t mode, const std::uint8_t temp, const float kp, const float ki, const float kd, const float limitie){
+		auto msg = std::make_unique<robo_messages::RobomasFrame>();
+		msg->motor = motor;
+		msg->mode = mode;
+		msg->temp = temp;
+		msg->kp = kp;
+		msg->ki = ki;
+		msg->kd = kd;
+		msg->limitie = limitie;
+		return msg;
+	}
 
-inline std::unique_ptr<can_plugins2::msg::RobomasTarget> get_robomas_target(const float target){
-  auto msg = std::make_unique<can_plugins2::msg::RobomasTarget>();
-  msg->target = target;
-  return msg;
+	inline std::unique_ptr<robo_messages::RobomasTarget> get_robomas_target(const float target){
+		auto msg = std::make_unique<robo_messages::RobomasTarget>();
+		msg->target = target;
+		return msg;
+	}
 }

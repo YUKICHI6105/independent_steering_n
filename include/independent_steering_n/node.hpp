@@ -29,8 +29,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <can_plugins2/msg/frame.hpp>
-#include <can_plugins2/msg/robomas_frame.hpp>
-#include <can_plugins2/msg/robomas_target.hpp>
 #include <independent_steering_n/msg/linear_velocity.hpp>
 #include <independent_steering_n/msg/angular_velocity.hpp>
 
@@ -40,11 +38,12 @@
 #include "gearbox.hpp"
 #include "steering_wheel.hpp"
 #include "control_mode.hpp"
-
-using namespace std::chrono_literals;
+#include "not_canplugins2_part.hpp"
 
 namespace nhk2024::independent_steering_n::node
 {
+	using namespace std::chrono_literals;
+
 	namespace impl
 	{
 		struct Vec2 final
@@ -77,11 +76,11 @@ namespace nhk2024::independent_steering_n::node
 	{
 		// publisher
 		rclcpp::Publisher<can_plugins2::msg::Frame>::SharedPtr can_tx;
-		rclcpp::Publisher<can_plugins2::msg::RobomasFrame>::SharedPtr robomas_pub;
-		rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub1_;
-    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub2_;
-    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub3_;
-    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub4_;
+		rclcpp::Publisher<robo_messages::RobomasFrame>::SharedPtr robomas_pub;
+		rclcpp::Publisher<robo_messages::RobomasTarget>::SharedPtr robomas_pub1_;
+    	rclcpp::Publisher<robo_messages::RobomasTarget>::SharedPtr robomas_pub2_;
+    	rclcpp::Publisher<robo_messages::RobomasTarget>::SharedPtr robomas_pub3_;
+    	rclcpp::Publisher<robo_messages::RobomasTarget>::SharedPtr robomas_pub4_;
 
 		// state of undercarriage
 		std::atomic<impl::Vec2> linear_velocity;
@@ -151,11 +150,11 @@ namespace nhk2024::independent_steering_n::node
 		Node(const std::string_view node_name, const rclcpp::NodeOptions& options):
 			rclcpp::Node(std::string(node_name), options),
 			can_tx{this->create_publisher<can_plugins2::msg::Frame>("can_tx", 100)},
-			robomas_pub{this->create_publisher<can_plugins2::msg::RobomasFrame>("robomaster", 100)},
-			robomas_pub1_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target1", 10)},
-			robomas_pub2_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target2", 10)},
-			robomas_pub3_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target3", 10)},
-			robomas_pub4_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target4", 10)},
+			robomas_pub{this->create_publisher<robo_messages::RobomasFrame>("robomaster", 100)},
+			robomas_pub1_{this->create_publisher<robo_messages::RobomasTarget>("robomas_target1", 10)},
+			robomas_pub2_{this->create_publisher<robo_messages::RobomasTarget>("robomas_target2", 10)},
+			robomas_pub3_{this->create_publisher<robo_messages::RobomasTarget>("robomas_target3", 10)},
+			robomas_pub4_{this->create_publisher<robo_messages::RobomasTarget>("robomas_target4", 10)},
 			linear_velocity{},
 			angular_velocity{},
 			mode{control_mode::ControlMode::disable},

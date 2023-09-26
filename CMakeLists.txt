@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.8)
 project(independent_steering_n)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -pedantic-errors -std=c++20 -latomic)
+  add_compile_options(-Wall -Wextra -pedantic-errors -std=c++20 -latomic -fmax-errors=3)
 endif()
 
 # find dependencies
@@ -52,12 +52,19 @@ ament_target_dependencies(node
   rclcpp_components
   std_msgs
   can_plugins2
+  # fake_robomaster_serial_can
 )
 
 ament_export_include_directories(include)
 
 install(
+  DIRECTORY include/
+  DESTINATION include/${PROJECT_NAME}
+)
+
+install(
   TARGETS node
+  INCLUDES DESTINATION include
 
   DESTINATION lib/${PROJECT_NAME}
 )
