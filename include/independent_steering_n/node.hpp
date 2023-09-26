@@ -29,7 +29,8 @@
 #include <rclcpp/rclcpp.hpp>
 #include <std_msgs/msg/u_int8.hpp>
 #include <can_plugins2/msg/frame.hpp>
-#include <fake_robomaster_serial_can/msg/robomas_frame.hpp>
+#include <can_plugins2/msg/robomas_frame.hpp>
+#include <can_plugins2/msg/robomas_target.hpp>
 #include <independent_steering_n/msg/linear_velocity.hpp>
 #include <independent_steering_n/msg/angular_velocity.hpp>
 
@@ -76,7 +77,11 @@ namespace nhk2024::independent_steering_n::node
 	{
 		// publisher
 		rclcpp::Publisher<can_plugins2::msg::Frame>::SharedPtr can_tx;
-		rclcpp::Publisher<fake_robomaster_serial_can::msg::RobomasFrame>::SharedPtr robomas_pub;
+		rclcpp::Publisher<can_plugins2::msg::RobomasFrame>::SharedPtr robomas_pub;
+		rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub1_;
+    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub2_;
+    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub3_;
+    	rclcpp::Publisher<can_plugins2::msg::RobomasTarget>::SharedPtr robomas_pub4_;
 
 		// state of undercarriage
 		std::atomic<impl::Vec2> linear_velocity;
@@ -102,8 +107,8 @@ namespace nhk2024::independent_steering_n::node
 		static constexpr auto initialize_wheels() noexcept
 		{
 			/// @todo 設定
-			constexpr rational::Rational steer_ratio{1, 1};
-			constexpr rational::Rational drive_ratio{1, 1};
+			constexpr rational::Rational steer_ratio{2, 5};
+			constexpr rational::Rational drive_ratio{1, 10};
 
 			return std::array<impl::AssembledWheel, 4>
 			{
@@ -116,13 +121,17 @@ namespace nhk2024::independent_steering_n::node
 
 		static auto initialize_shirasus(can_plugins2_channel::ChannelManager& can_manager) noexcept(false) -> std::array<shirasu::Shirasu, 4>
 		{
-			constexpr std::uint32_t steer_id = 0x100;
+			//constexpr std::uint32_t steer_id = 0x100;
 
 			std::array<std::optional<shirasu::Shirasu>, 4> shirasu_opt{};
 
+			shirasu_opt[0] = shirasu::Shirasu::make(can_manager, 0x150);
+			shirasu_opt[1] = shirasu::Shirasu::make(can_manager, 0x144);
+			shirasu_opt[2] = shirasu::Shirasu::make(can_manager, 0x168);
+			shirasu_opt[3] = shirasu::Shirasu::make(can_manager, 0x110);
+
 			for(std::uint32_t i = 0; i < 4; ++i)
 			{
-				shirasu_opt[i] = shirasu::Shirasu::make(can_manager, steer_id + 0x10 * i);
 				if(!shirasu_opt[i])
 				{
 					throw std::runtime_error{"failed to make shirasu while initializing shirasus."};
@@ -142,7 +151,11 @@ namespace nhk2024::independent_steering_n::node
 		Node(const std::string_view node_name, const rclcpp::NodeOptions& options):
 			rclcpp::Node(std::string(node_name), options),
 			can_tx{this->create_publisher<can_plugins2::msg::Frame>("can_tx", 100)},
-			robomas_pub{this->create_publisher<fake_robomaster_serial_can::msg::RobomasFrame>("robomasu_tx", 100)},
+			robomas_pub{this->create_publisher<can_plugins2::msg::RobomasFrame>("robomaster", 100)},
+			robomas_pub1_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target1", 10)},
+			robomas_pub2_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target2", 10)},
+			robomas_pub3_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target3", 10)},
+			robomas_pub4_{this->create_publisher<can_plugins2::msg::RobomasTarget>("robomas_target4", 10)},
 			linear_velocity{},
 			angular_velocity{},
 			mode{control_mode::ControlMode::disable},
@@ -185,7 +198,7 @@ namespace nhk2024::independent_steering_n::node
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
-						robomaster_pub::send_target(robomas_pub, drive_targets);
+						robomaster_pub::send_target(robomas_pub1_, robomas_pub2_, robomas_pub3_, robomas_pub4_, drive_targets);
 					}
 					break;
 
@@ -199,7 +212,7 @@ namespace nhk2024::independent_steering_n::node
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
-						robomaster_pub::send_target(robomas_pub, drive_targets);
+						robomaster_pub::send_target(robomas_pub1_, robomas_pub2_, robomas_pub3_, robomas_pub4_, drive_targets);
 					}
 					break;
 				}
