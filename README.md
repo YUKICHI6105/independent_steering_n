@@ -9,7 +9,18 @@ C++知識が少なくても読める。はずだった。
 
 # 特徴
 カニ制御とくるくる制御、を実装。
+
 どちらで制御するかは、切り替えるたびにTopicの`/<node_name>/control_mode`経由で切り替える。
+```c++
+enum class ControlMode : std::uint8_t
+{
+    disable,
+    crab,
+    spinning
+};
+```
+これをUint8にキャストして送ってください。
+
 カニ制御の指令値は`/<node_name>/linear_velocity`に`independent_steering_n/msg/LinearVelocity`、
 くるくる制御の指令値は`/<node_name>/angular_velocity`に`independent_steering_n/msg/AngularVelocity`で受け取る。
 
