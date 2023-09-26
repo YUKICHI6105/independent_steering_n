@@ -69,6 +69,11 @@ namespace nhk2024::independent_steering_n::node
 				const auto [angle, speed] = steering_wheel.inverse(steering_angle - zero_angle, driving_speed);
 				return {steer_gb.inverse(angle), drive_gb.inverse(speed)};
 			}
+
+			auto stop() noexcept -> double
+			{
+				return steer_gb.inverse(steering_wheel.stop());
+			}
 		};
 	}
 
@@ -189,14 +194,21 @@ namespace nhk2024::independent_steering_n::node
 						const auto linear = linear_velocity.load();
 						const double theta = std::atan2(linear.y, linear.x);
 						const double v = std::sqrt(linear.x * linear.x + linear.y * linear.y);
+
 						float drive_targets[4]{};
-						for(int i = 0; i < 4; ++i)
+						if(v < 0.05) for(int i = 0; i < 4; ++i)
+						{
+							const auto steer_target = wheels[i].stop();
+							shirasus[i].send_target(steer_target);
+						}
+						else for(int i = 0; i < 4; ++i)
 						{
 							const auto [steer_target, drive_target] = wheels[i].inverse(theta, v);
 							RCLCPP_INFO(this->get_logger(), "steer_target: %f", steer_target);
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
+
 						robomaster_pub::send_target(robomas_pub1_, robomas_pub2_, robomas_pub3_, robomas_pub4_, drive_targets);
 					}
 					break;
