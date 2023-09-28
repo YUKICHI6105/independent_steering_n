@@ -11,7 +11,7 @@ namespace nhk2024::independent_steering_n::steering_wheel
 	constexpr double enough_slow = 0.001;
 	struct SteeringWheel final
 	{
-		double current_driving_speed;
+		double driving_speed_average;
 		double current_angle;
 
 		static auto make() noexcept
@@ -21,7 +21,9 @@ namespace nhk2024::independent_steering_n::steering_wheel
 
 		auto inverse(double steering_angle, const double driving_speed) noexcept -> std::pair<double, double>
 		{
-			const bool reverse_angle = std::signbit(current_driving_speed) ^ std::signbit(driving_speed) && std::abs(current_driving_speed) > enough_slow;
+			
+			driving_speed_average = 0.9 * driving_speed_average + 0.1 * driving_speed;
+			const bool reverse_angle = std::signbit(driving_speed_average) ^ std::signbit(driving_speed) && std::abs(driving_speed_average) > enough_slow;
 			if(reverse_angle)
 			{
 				if(steering_angle > 0.0)
@@ -34,20 +36,19 @@ namespace nhk2024::independent_steering_n::steering_wheel
 				}
 			}
 
-			current_driving_speed = 0.9 * current_driving_speed + 0.1 * driving_speed;
 			current_angle = steering_angle;
 			return {steering_angle, driving_speed};
 		}
 
 		auto stop() noexcept -> double
 		{
-			current_driving_speed = 0.0;
+			driving_speed_average = 0.0;
 			return current_angle;
 		}
 
 		void clear() noexcept
 		{
-			current_driving_speed = 0.0;
+			driving_speed_average = 0.0;
 		}
 	};
 }
