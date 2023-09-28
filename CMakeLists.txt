@@ -64,8 +64,6 @@ install(
 
 install(
   TARGETS node
-  INCLUDES DESTINATION include
-
   DESTINATION lib/${PROJECT_NAME}
 )
 
