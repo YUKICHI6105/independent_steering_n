@@ -21,7 +21,7 @@ namespace nhk2024::independent_steering_n::steering_wheel
 
 		auto inverse(double steering_angle, const double driving_speed) noexcept -> std::pair<double, double>
 		{
-			const bool reverse_angle = std::signbit(current_driving_speed) ^ std::signbit(driving_speed) && std::abs(driving_speed - current_driving_speed) > enough_slow;
+			const bool reverse_angle = std::signbit(current_driving_speed) ^ std::signbit(driving_speed) && std::abs(current_driving_speed) > enough_slow;
 			if(reverse_angle)
 			{
 				if(steering_angle > 0.0)
@@ -34,7 +34,7 @@ namespace nhk2024::independent_steering_n::steering_wheel
 				}
 			}
 
-			current_driving_speed = driving_speed;
+			current_driving_speed = 0.9 * current_driving_speed + 0.1 * driving_speed;
 			current_angle = steering_angle;
 			return {steering_angle, driving_speed};
 		}
