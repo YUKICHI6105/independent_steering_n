@@ -222,6 +222,7 @@ namespace nhk2024::independent_steering_n::node
 						for(int i = 0; i < 4; ++i)
 						{
 							const auto [steer_target, drive_target] = wheels[i].inverse(wheels[i].zero_angle, angular);
+							RCLCPP_INFO(this->get_logger(), "steer_target: %f", steer_target);
 							shirasus[i].send_target(steer_target);
 							drive_targets[i] = drive_target;
 						}
@@ -273,7 +274,7 @@ namespace nhk2024::independent_steering_n::node
 						case ControlMode::crab:
 							for(auto& steer : shirasus)
 							{
-								steer.send_command<shirasu::State::velocity>();
+								steer.send_command<shirasu::State::position>();
 							}
 							robomaster_pub::enable_all(robomas_pub);
 							break;
@@ -281,7 +282,7 @@ namespace nhk2024::independent_steering_n::node
 						case ControlMode::spinning:
 							for(auto& steer : shirasus)
 							{
-								steer.send_command<shirasu::State::velocity>();
+								steer.send_command<shirasu::State::position>();
 							}
 							robomaster_pub::enable_all(robomas_pub);
 							break;

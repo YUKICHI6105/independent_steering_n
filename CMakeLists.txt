@@ -23,6 +23,7 @@ ament_export_dependencies(rosidl_default_runtime)
 set(msg_files
   "msg/LinearVelocity.msg"
   "msg/AngularVelocity.msg"
+  "msg/TxFloat.msg"
 )
 
 include_directories(
@@ -37,10 +38,15 @@ add_executable(node
   src/node.cpp
 )
 
+add_executable(tx_listener
+  src/tx_listener.cpp
+)
+
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} "rosidl_typesupport_cpp"
 )
 target_link_libraries(node "${cpp_typesupport_target}" atomic)
+target_link_libraries(tx_listener "${cpp_typesupport_target}")
 
 # add_library(node SHARED
 #   src/independent_steering_n.cpp
@@ -55,6 +61,12 @@ ament_target_dependencies(node
   # fake_robomaster_serial_can
 )
 
+ament_target_dependencies(tx_listener
+  rclcpp
+  rclcpp_components
+  can_plugins2
+)
+
 ament_export_include_directories(include)
 
 install(
@@ -64,7 +76,13 @@ install(
 
 install(
   TARGETS node
+  TARGETS node tx_listener
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}/
 )
 
 if(BUILD_TESTING)
