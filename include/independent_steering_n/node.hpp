@@ -44,14 +44,14 @@ namespace nhk2024::independent_steering_n::node
 {
 	using namespace std::chrono_literals;
 
-	constexpr double deadzone = 0.05;
-
 	namespace impl
 	{
+		constexpr double deadzone = 0.1;
+
 		struct Vec2 final
 		{
-			double x;
-			double y;
+			double x{0.0};
+			double y{0.0};
 		};
 
 		struct AssembledWheel final
@@ -60,16 +60,17 @@ namespace nhk2024::independent_steering_n::node
 			const gearbox::Gearedbox drive_gb;
 			steering_wheel::SteeringWheel steering_wheel;
 			const double zero_angle;  // 操舵角0度のときの機体座標上でのホイールの向き (rad) (ホイールの位置ベクトルに直交している)
+			const bool reversed;  // ホイールの向きが逆のときtrue
 
-			static constexpr auto make(const double zero_angle, const rational::Rational& steer, const rational::Rational& drive) noexcept -> AssembledWheel
+			static constexpr auto make(const double zero_angle, const bool reversed, const rational::Rational& steer, const rational::Rational& drive) noexcept -> AssembledWheel
 			{
-				return AssembledWheel{gearbox::Gearedbox{std::move(steer)}, gearbox::Gearedbox{std::move(drive)}, steering_wheel::SteeringWheel{}, zero_angle};
+				return AssembledWheel{gearbox::Gearedbox{std::move(steer)}, gearbox::Gearedbox{std::move(drive)}, steering_wheel::SteeringWheel{}, zero_angle, reversed};
 			}
 
 			auto inverse(const double steering_angle, const double driving_speed) noexcept -> std::pair<double, double>
 			{
 				const auto [angle, speed] = steering_wheel.inverse(steering_angle - zero_angle, driving_speed);
-				return {steer_gb.inverse(angle), drive_gb.inverse(speed)};
+				return { (reversed ? -1 : 1) * steer_gb.inverse(angle), drive_gb.inverse(speed)};
 			}
 
 			auto stop() noexcept -> double
@@ -90,8 +91,8 @@ namespace nhk2024::independent_steering_n::node
     	rclcpp::Publisher<robo_messages::RobomasTarget>::SharedPtr robomas_pub4_;
 
 		// state of undercarriage
-		std::atomic<impl::Vec2> linear_velocity;
-		std::atomic<double> angular_velocity;
+		std::atomic<impl::Vec2> linear_velocity{};
+		std::atomic<double> angular_velocity{};
 		control_mode::ControlMode mode;
 		std::mutex mode_mutex;
 
@@ -118,10 +119,10 @@ namespace nhk2024::independent_steering_n::node
 
 			return std::array<impl::AssembledWheel, 4>
 			{
-				impl::AssembledWheel::make(std::numbers::pi * 3 / 4, steer_ratio, drive_ratio),
-				impl::AssembledWheel::make(std::numbers::pi * 5 / 4, steer_ratio, drive_ratio),
-				impl::AssembledWheel::make(std::numbers::pi * 7 / 4, steer_ratio, drive_ratio),
-				impl::AssembledWheel::make(std::numbers::pi * 1 / 4, steer_ratio, drive_ratio)
+				impl::AssembledWheel::make(std::numbers::pi * 3 / 4, false, steer_ratio, drive_ratio),
+				impl::AssembledWheel::make(std::numbers::pi * 5 / 4, true, steer_ratio, drive_ratio),
+				impl::AssembledWheel::make(std::numbers::pi * 7 / 4, true, steer_ratio, drive_ratio),
+				impl::AssembledWheel::make(std::numbers::pi * 1 / 4, false, steer_ratio, drive_ratio)
 			};
 		}
 
@@ -198,7 +199,7 @@ namespace nhk2024::independent_steering_n::node
 						const double v = std::sqrt(linear.x * linear.x + linear.y * linear.y);
 
 						float drive_targets[4]{};
-						if(v < deadzone) for(int i = 0; i < 4; ++i)
+						if(v < impl::deadzone) for(int i = 0; i < 4; ++i)
 						{
 							const auto steer_target = wheels[i].stop();
 							RCLCPP_INFO(this->get_logger(), "steer_target: %f", steer_target);
@@ -276,6 +277,7 @@ namespace nhk2024::independent_steering_n::node
 							for(auto& steer : shirasus)
 							{
 								steer.send_command<shirasu::State::position>();
+								steer.send_target(0.0);
 							}
 							robomaster_pub::enable_all(robomas_pub);
 							break;
@@ -284,7 +286,9 @@ namespace nhk2024::independent_steering_n::node
 							for(auto& steer : shirasus)
 							{
 								steer.send_command<shirasu::State::position>();
+								steer.send_target(0.0);
 							}
+							// shirasus[1].send_command<shirasu::State::position>();  // ****!
 							robomaster_pub::enable_all(robomas_pub);
 							break;
 					}
