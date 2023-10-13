@@ -30,8 +30,14 @@ namespace nhk2024::independent_steering_n::tx_listener
             if(msg->dlc != sizeof(float)) return;
 
             TxFloat converted{};
-            converted.id =msg->id;
-            std::memcpy(&converted.data, msg->data.data(), sizeof(float));
+            converted.id = (msg->id / 0x100) * 100 + (msg->id % 0x100 / 0x10) * 10 + (msg->id %0x10 / 0x1) * 1;
+            std::uint8_t data[sizeof(float)]{};
+            std::memcpy(&data, msg->data.data(), sizeof(float));
+            for(std::uint32_t i = 0; i < sizeof(float) / 2; ++i)
+            {
+                std::swap(data[i], data[sizeof(float) - i - 1]);
+            }
+            std::memcpy(&converted.data, &data, sizeof(float));
             pub->publish(converted);
         }
     };

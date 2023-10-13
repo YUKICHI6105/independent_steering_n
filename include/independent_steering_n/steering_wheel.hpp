@@ -11,44 +11,33 @@ namespace nhk2024::independent_steering_n::steering_wheel
 	constexpr double enough_slow = 0.001;
 	struct SteeringWheel final
 	{
-		double driving_speed_average;
 		double current_angle;
 
 		static auto make() noexcept
 		{
-			return SteeringWheel{0.0, 0.0};
+			return SteeringWheel{0.0};
 		}
 
-		auto inverse(double steering_angle, const double driving_speed) noexcept -> std::pair<double, double>
+		auto inverse(const double steering_angle, const double driving_speed) noexcept -> std::pair<double, double>
 		{
-			
-			driving_speed_average = 0.9 * driving_speed_average + 0.1 * driving_speed;
-			const bool reverse_angle = std::signbit(driving_speed_average) ^ std::signbit(driving_speed) && std::abs(driving_speed_average) > enough_slow;
-			if(reverse_angle)
-			{
-				if(steering_angle > 0.0)
-				{
-					steering_angle -= std::numbers::pi;
-				}
-				else
-				{
-					steering_angle += std::numbers::pi;
-				}
-			}
+			// 差を2πで割った余りを求める
+			const double diff = std::fmod(steering_angle - current_angle, std::numbers::pi * 2.0);
+			current_angle += diff;
 
-			current_angle = steering_angle;
-			return {steering_angle, driving_speed};
+			// 差がπより大きい場合は、操舵をdiff ± 2π回転させ(すなわち逆向きに回し)、駆動の符号を反転させる
+			if(std::abs(diff) > std::numbers::pi)
+			{
+				current_angle += (diff > 0.0 ? -std::numbers::pi * 2.0 : std::numbers::pi * 2.0);
+				return std::make_pair(current_angle, -driving_speed);
+			}
+			{
+				return std::make_pair(current_angle, driving_speed);
+			}
 		}
 
 		auto stop() noexcept -> double
 		{
-			driving_speed_average = 0.0;
 			return current_angle;
-		}
-
-		void clear() noexcept
-		{
-			driving_speed_average = 0.0;
 		}
 	};
 }

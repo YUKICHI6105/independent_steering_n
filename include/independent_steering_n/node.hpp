@@ -131,10 +131,10 @@ namespace nhk2024::independent_steering_n::node
 
 			std::array<std::optional<shirasu::Shirasu>, 4> shirasu_opt{};
 
-			shirasu_opt[0] = shirasu::Shirasu::make(can_manager, 0x150);
-			shirasu_opt[1] = shirasu::Shirasu::make(can_manager, 0x144);
-			shirasu_opt[2] = shirasu::Shirasu::make(can_manager, 0x168);
-			shirasu_opt[3] = shirasu::Shirasu::make(can_manager, 0x110);
+			shirasu_opt[0] = shirasu::Shirasu::make(can_manager, 0x110);
+			shirasu_opt[1] = shirasu::Shirasu::make(can_manager, 0x120);
+			shirasu_opt[2] = shirasu::Shirasu::make(can_manager, 0x144);
+			shirasu_opt[3] = shirasu::Shirasu::make(can_manager, 0x150);
 
 			for(std::uint32_t i = 0; i < 4; ++i)
 			{
@@ -201,6 +201,7 @@ namespace nhk2024::independent_steering_n::node
 						if(v < deadzone) for(int i = 0; i < 4; ++i)
 						{
 							const auto steer_target = wheels[i].stop();
+							RCLCPP_INFO(this->get_logger(), "steer_target: %f", steer_target);
 							shirasus[i].send_target(steer_target);
 						}
 						else for(int i = 0; i < 4; ++i)
@@ -288,6 +289,8 @@ namespace nhk2024::independent_steering_n::node
 							break;
 					}
 					RCLCPP_INFO(this->get_logger(), "control mode changing end: %d", msg->data);
+
+					rclcpp::sleep_for(500ms);
 
 					this->mode = *mode;
 				}

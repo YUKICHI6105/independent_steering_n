@@ -18,8 +18,13 @@ namespace nhk2024::independent_steering_n::can_channel
 		static auto make(auto x) noexcept -> DataField
 		requires (sizeof(std::remove_cvref_t<decltype(x)>) <= 8) && std::is_trivially_copyable_v<decltype(x)>
 		{
-			DataField ret;
+			DataField ret{};
 			std::memcpy(ret.data, &x, sizeof(x));
+			for(std::uint32_t i = 0; i < sizeof(x) / 2; ++i)
+			{
+				std::swap(ret.data[i], ret.data[sizeof(x) - i - 1]);
+			}
+
 			ret.dlc = sizeof(x);
 			return ret;
 		}
