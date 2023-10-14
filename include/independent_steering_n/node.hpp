@@ -77,6 +77,11 @@ namespace nhk2024::independent_steering_n::node
 			{
 				return steer_gb.inverse(steering_wheel.stop());
 			}
+
+			void reset() noexcept
+			{
+				steering_wheel.reset();
+			}
 		};
 	}
 
@@ -119,10 +124,10 @@ namespace nhk2024::independent_steering_n::node
 
 			return std::array<impl::AssembledWheel, 4>
 			{
-				impl::AssembledWheel::make(std::numbers::pi * 3 / 4, false, steer_ratio, drive_ratio),
+				impl::AssembledWheel::make(std::numbers::pi * 3 / 4, true, steer_ratio, drive_ratio),
 				impl::AssembledWheel::make(std::numbers::pi * 5 / 4, true, steer_ratio, drive_ratio),
 				impl::AssembledWheel::make(std::numbers::pi * 7 / 4, true, steer_ratio, drive_ratio),
-				impl::AssembledWheel::make(std::numbers::pi * 1 / 4, false, steer_ratio, drive_ratio)
+				impl::AssembledWheel::make(std::numbers::pi * 1 / 4, true, steer_ratio, drive_ratio)
 			};
 		}
 
@@ -268,14 +273,20 @@ namespace nhk2024::independent_steering_n::node
 						case ControlMode::disable:
 							for(auto& steer : shirasus)
 							{
+								rclcpp::sleep_for(100ms);
 								steer.send_command<shirasu::State::disable>();
 							}
 							robomaster_pub::disable_all(robomas_pub);
 							break;
 						
 						case ControlMode::crab:
+							for(auto& wheel : wheels)
+							{
+								wheel.reset();
+							}
 							for(auto& steer : shirasus)
 							{
+								rclcpp::sleep_for(100ms);
 								steer.send_command<shirasu::State::position>();
 								steer.send_target(0.0);
 							}
@@ -283,8 +294,13 @@ namespace nhk2024::independent_steering_n::node
 							break;
 
 						case ControlMode::spinning:
+							for(auto& wheel : wheels)
+							{
+								wheel.reset();
+							}
 							for(auto& steer : shirasus)
 							{
+								rclcpp::sleep_for(100ms);
 								steer.send_command<shirasu::State::position>();
 								steer.send_target(0.0);
 							}

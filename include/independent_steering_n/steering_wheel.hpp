@@ -39,5 +39,10 @@ namespace nhk2024::independent_steering_n::steering_wheel
 		{
 			return current_angle;
 		}
+
+		void reset() noexcept
+		{
+			current_angle = 0.0;
+		}
 	};
 }
